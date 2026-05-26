@@ -61,7 +61,7 @@ const adminCreateRoute = createRoute({
 import PropertyDetails from "./PropertyDetails";
 const propertyDetailsRoute = createRoute({
   getParentRoute: () => rootRoute,
-  path: "/property/$id",
+  path: "/property/:id",
   component: PropertyDetails
 });
 // Route tree
