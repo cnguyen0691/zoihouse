@@ -26,19 +26,21 @@ router.post("/", async (req, res) => {
     const zpid = match[1];
 
     // RapidAPI Request
-    const response = await axios.get(
-  "https://zillo-realtime-scraper.p.rapidapi.com/property",
+ const response = await axios.post(
+  "https://zillo-realtime-scraper.p.rapidapi.com/full_property_bundle/index.php",
   {
-    params: { zpid },
+    zillow_url: url,
+  },
+  {
     headers: {
-      "X-RapidAPI-Key": process.env.RAPIDAPI_KEY,
-      "X-RapidAPI-Host": "zillo-realtime-scraper.p.rapidapi.com",
+      "x-rapidapi-key": process.env.RAPIDAPI_KEY,
+      "x-rapidapi-host": "zillo-realtime-scraper.p.rapidapi.com",
+      "Content-Type": "application/json",
     },
   }
 );
 
-console.log("RAPIDAPI RESPONSE:", response.data);
-    const property = response.data;
+const property = response.data.data;
 
     // Clean normalized response
    const listing = {
@@ -80,10 +82,11 @@ console.log("RAPIDAPI RESPONSE:", response.data);
 
   features: [],
 
-  images:
-    property.photos || [
-      property.imgSrc,
-    ],
+  images: Array.isArray(property.photos)
+  ? property.photos.filter(Boolean)
+  : property.imgSrc
+  ? [property.imgSrc]
+  : [],
 
   agent: {
     name: "",

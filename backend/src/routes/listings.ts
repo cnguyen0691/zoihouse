@@ -10,12 +10,12 @@ router.use("/import", importListingRoute);
 router.get("/", async (req, res) => {
   const snapshot = await db.collection("listings").get();
 
-  res.json(
-    snapshot.docs.map((doc) => ({
-      id: doc.id,
-      ...doc.data(),
-    }))
-  );
+ const listings = snapshot.docs.map((doc) => ({
+    id: doc.id,
+    ...doc.data(),
+  }));
+
+  res.json(listings);
 });
 
 router.get("/:id", async (req, res) => {
