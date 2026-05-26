@@ -1,0 +1,68 @@
+.hero {
+  position: relative;
+  min-height: 90vh;
+  display: flex;
+  align-items: center;
+  background: url("/assets/hero.jpg") center/cover no-repeat;
+}
+
+.hero-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    to right,
+    rgba(20, 20, 40, 0.85),
+    rgba(20, 20, 40, 0.5),
+    transparent
+  );
+}
+
+.hero-content {
+  position: relative;
+  max-width: 700px;
+  padding: 80px;
+  color: white;
+}
+
+.badge {
+  display: inline-block;
+  padding: 6px 12px;
+  border: 1px solid gold;
+  color: gold;
+  font-size: 12px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
+
+.hero h1 {
+  font-size: 64px;
+  line-height: 1.05;
+  margin-top: 20px;
+}
+
+.hero p {
+  margin-top: 20px;
+  opacity: 0.8;
+  max-width: 450px;
+}
+
+.search {
+  margin-top: 30px;
+  display: flex;
+  background: white;
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.search input {
+  flex: 1;
+  padding: 14px;
+  border: none;
+  outline: none;
+}
+
+.search button {
+  background: black;
+  color: white;
+  padding: 0 24px;
+}

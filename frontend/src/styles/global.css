@@ -1,0 +1,29 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+*
+ {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+   @apply bg-white text-slate-900 font-sans;
+  font-family: Inter, sans-serif;
+  background: #0f172a;
+  /* color: white; */
+}
+
+.container {
+  width: min(1200px, 92%);
+  margin-inline: auto;
+}
+
+button {
+  border: none;
+  cursor: pointer;
+}
