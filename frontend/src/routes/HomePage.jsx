@@ -16,7 +16,7 @@ export default function HomePage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch("http://localhost:5000/api/listings")
+    fetch("http://localhost:5000/api/listings/admin/listings")
       .then((res) => res.json())
       .then((data) => {
         setListings(data);

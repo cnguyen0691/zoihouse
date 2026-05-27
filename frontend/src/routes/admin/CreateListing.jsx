@@ -1,252 +1,341 @@
-import { auth } from "../../../lib/firebase";
-import { useEffect, useState } from "react";
-import { useNavigate } from "@tanstack/react-router";
-import { getAdminStatus } from "../../auth/adminAuth";
+import { useState } from "react";
 
 export default function CreateListing() {
-  const navigate = useNavigate();
+  const [form, setForm] = useState({
+    address: {},
+    details: {},
+    agent: {},
+    images: [],
+    features: [],
+    location: {},
+  });
 
-  const [listingUrl, setListingUrl] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
-  const [listingData, setListingData] = useState(null);
+  const handleChange = (path, value) => {
+    setForm((prev) => {
+      const updated = { ...prev };
+      const keys = path.split(".");
+      let obj = updated;
 
-  // Protect admin route
-  useEffect(() => {
-    const unsubscribe = auth.onAuthStateChanged(async (user) => {
-      if (!user) {
-        navigate({ to: "/signin" });
-        return;
+      for (let i = 0; i < keys.length - 1; i++) {
+        obj[keys[i]] = obj[keys[i]] || {};
+        obj = obj[keys[i]];
       }
 
-      const isAdmin = await getAdminStatus(user.uid);
-
-      if (!isAdmin) {
-        navigate({ to: "/" });
-      }
+      obj[keys[keys.length - 1]] = value;
+      return updated;
     });
-
-    return () => unsubscribe();
-  }, []);
-
-  const handleImport = async () => {
-    setError("");
-    setSuccess("");
-    setListingData(null);
-
-    if (!listingUrl) {
-      setError("Please enter a Zillow URL");
-      return;
-    }
-
-    try {
-      setLoading(true);
-
-      const response = await fetch("/api/import-listing", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          url: listingUrl,
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to import listing");
-      }
-
-      const data = await response.json();
-
-      setListingData(data);
-      setSuccess("Listing imported successfully");
-    } catch (err) {
-      console.error(err);
-      setError("Could not import listing");
-    } finally {
-      setLoading(false);
-    }
   };
 
-  const handleSaveListing = async () => {
-    if (!listingData) return;
+  const addImage = (url) => {
+    if (!url) return;
 
-    try {
-      setSaving(true);
+    setForm((prev) => ({
+      ...prev,
+      images: [...prev.images, url],
+    }));
+  };
 
-      const response = await fetch("/api/listings", {
+  const removeImage = (index) => {
+    setForm((prev) => ({
+      ...prev,
+      images: prev.images.filter((_, i) => i !== index),
+    }));
+  };
+
+  const submitListing = async () => {
+  try {
+    const response = await fetch(
+      "http://localhost:5000/api/listings",
+      {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          "x-admin": "true",
         },
-        body: JSON.stringify(listingData),
-      });
+        body: JSON.stringify(form),
+      }
+    );
 
-      if (!response.ok) {
-        throw new Error("Failed to save listing");
+    const data = await response.json();
+
+    console.log("STATUS:", response.status);
+    console.log("RESPONSE:", data);
+
+    if (!response.ok) {
+      throw new Error(data.message || "Failed to create listing");
+    }
+
+    if (form.success) {
+      navigate("/listings");
+    }
+  } catch (err) {
+    console.error("Error submitting listing:", err);
+  }
+};
+
+  return (
+    <div style={styles.container}>
+      <h1>Create New Listing (Admin)</h1>
+
+      {/* ADDRESS */}
+      <Section title="Address">
+        <Input
+          placeholder="Street Address"
+          onChange={(e) =>
+            handleChange("address.streetAddress", e.target.value)
+          }
+        />
+        <Input
+          placeholder="City"
+          onChange={(e) => handleChange("address.city", e.target.value)}
+        />
+        <Input
+          placeholder="State"
+          onChange={(e) => handleChange("address.state", e.target.value)}
+        />
+        <Input
+          placeholder="Zip Code"
+          onChange={(e) => handleChange("address.zipcode", e.target.value)}
+        />
+      </Section>
+
+      {/* PRICE */}
+      <Section title="Price">
+        <Input
+          type="number"
+          placeholder="Price"
+          onChange={(e) => handleChange("price", Number(e.target.value))}
+        />
+      </Section>
+
+      {/* DETAILS */}
+      <Section title="Details">
+        <Input
+          type="number"
+          placeholder="Beds"
+          onChange={(e) => handleChange("bedrooms", Number(e.target.value))}
+        />
+        <Input
+          type="number"
+          placeholder="Baths"
+          onChange={(e) => handleChange("bathrooms", Number(e.target.value))}
+        />
+        <Input
+          type="number"
+          placeholder="Sqft"
+          onChange={(e) => handleChange("livingArea", Number(e.target.value))}
+        />
+        <Input
+          placeholder="Property Type"
+          onChange={(e) => handleChange("homeType", e.target.value)}
+        />
+      </Section>
+
+      {/* DESCRIPTION */}
+      <Section title="Description">
+        <textarea
+          style={styles.textarea}
+          placeholder="Write description..."
+          onChange={(e) => handleChange("description", e.target.value)}
+        />
+      </Section>
+
+      {/* IMAGES (CLOUDINARY UPLOAD) */}
+      <Section title="Images">
+        <ImageInput onAdd={addImage} />
+
+        <div style={styles.imageGrid}>
+            {form.images.length === 0 && (
+            <p style={{ color: "#888" }}>No images uploaded yet</p>
+            )}
+
+            {form.images.map((img, i) => (
+          <div key={i} style={styles.imageCard}>
+              <img src={img} alt="" style={styles.image} />
+
+                <button
+                      type="button"
+                      style={styles.removeBtn}
+                       onClick={() => removeImage(i)}
+             >
+                  ✕
+                </button>
+          </div>
+          ))}
+        </div>
+      </Section>
+
+      {/* AGENT */}
+      <Section title="Agent Info">
+        <Input
+          placeholder="Agent Name"
+          onChange={(e) => handleChange("agent.name", e.target.value)}
+        />
+        <Input
+          placeholder="Agent Phone"
+          onChange={(e) => handleChange("agent.phone", e.target.value)}
+        />
+        <Input
+          placeholder="Agent Image URL"
+          onChange={(e) => handleChange("agent.image", e.target.value)}
+        />
+      </Section>
+
+      {/* LOCATION */}
+      <Section title="Location">
+        <Input
+          placeholder="Latitude"
+          onChange={(e) => handleChange("latitude", Number(e.target.value))}
+        />
+        <Input
+          placeholder="Longitude"
+          onChange={(e) => handleChange("longitude", Number(e.target.value))}
+        />
+      </Section>
+
+      <button style={styles.button} onClick={submitListing}>
+        Create Listing
+      </button>
+    </div>
+  );
+}
+
+/* ---------------- CLOUDINARY IMAGE UPLOADER ---------------- */
+
+function ImageInput({ onAdd }) {
+  const [uploading, setUploading] = useState(false);
+
+  const uploadToCloudinary = async (e) => {
+    const files = Array.from(e.target.files);
+
+    for (let file of files) {
+      setUploading(true);
+
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("upload_preset", "listing_upload"); // 🔥 your preset
+
+      try {
+        const res = await fetch(
+          "https://api.cloudinary.com/v1_1/ho-chi-minh-city/image/upload",
+          {
+            method: "POST",
+            body: formData,
+          }
+        );
+
+        const data = await res.json();
+
+        console.log("Cloudinary response:", data);
+
+        if (!res.ok) {
+            throw new Error(data.error?.message || "Upload failed");
       }
 
-      setSuccess("Listing saved successfully");
-    } catch (err) {
-      console.error(err);
-      setError("Failed to save listing");
-    } finally {
-      setSaving(false);
+        onAdd(data.secure_url);
+      } catch (err) {
+        console.error("Upload failed:", err);
+      } finally {
+        setUploading(false);
+      }
     }
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 p-8">
-      <div className="max-w-4xl mx-auto">
-        <div className="bg-white border rounded-2xl shadow-sm p-8">
-          <h1 className="text-3xl font-bold mb-2">
-            Create Listing
-          </h1>
+    <div style={{ marginBottom: 10 }}>
+      <input
+        type="file"
+        accept="image/*"
+        multiple
+        onChange={uploadToCloudinary}
+      />
 
-          <p className="text-gray-500 mb-8">
-            Import property data directly from Zillow
-          </p>
-
-          {/* URL INPUT */}
-          <div className="space-y-4">
-            <label className="block text-sm font-medium">
-              Zillow Listing URL
-            </label>
-
-            <div className="flex gap-3">
-              <input
-                type="text"
-                placeholder="https://www.zillow.com/..."
-                value={listingUrl}
-                onChange={(e) => setListingUrl(e.target.value)}
-                className="flex-1 border rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-black"
-              />
-
-              <button
-                onClick={handleImport}
-                disabled={loading}
-                className="bg-black text-white px-6 py-3 rounded-xl hover:bg-gray-800 disabled:opacity-50"
-              >
-                {loading ? "Importing..." : "Import"}
-              </button>
-            </div>
-
-            {error && (
-              <div className="text-red-500 text-sm">
-                {error}
-              </div>
-            )}
-
-            {success && (
-              <div className="text-green-600 text-sm">
-                {success}
-              </div>
-            )}
-          </div>
-
-          {/* PREVIEW */}
-          {listingData && (
-            <div className="mt-10 border-t pt-8">
-              <h2 className="text-2xl font-semibold mb-6">
-                Listing Preview
-              </h2>
-
-              <div className="grid md:grid-cols-2 gap-8">
-                {/* IMAGE */}
-                <div className="grid grid-cols-2 gap-3">
-                   {listingData.photos
-                      ?.slice(0, 4)
-                       .map((photo, index) => (
-                          <img
-                            key={index}
-                            src={photo}
-                            alt=""
-                            className="rounded-xl h-40 w-full object-cover"
-                  />
-                ))}
-                </div>
-
-                {/* INFO */}
-                <div className="space-y-4">
-                  <div>
-                    <p className="text-gray-500 text-sm">
-                      Address
-                    </p>
-
-                    <h3 className="text-xl font-semibold">
-                      {listingData.address}
-                    </h3>
-                  </div>
-
-                  <div>
-                    <p className="text-gray-500 text-sm">
-                      Price
-                    </p>
-
-                    <h3 className="text-2xl font-bold">
-                      ${listingData.price?.toLocaleString()}
-                    </h3>
-                  </div>
-
-                  <div className="flex gap-6">
-                    <div>
-                      <p className="text-gray-500 text-sm">
-                        Beds
-                      </p>
-
-                      <p className="font-semibold">
-                        {listingData.bedrooms}
-                      </p>
-                    </div>
-
-                    <div>
-                      <p className="text-gray-500 text-sm">
-                        Baths
-                      </p>
-
-                      <p className="font-semibold">
-                        {listingData.bathrooms}
-                      </p>
-                    </div>
-
-                    <div>
-                      <p className="text-gray-500 text-sm">
-                        Sqft
-                      </p>
-
-                      <p className="font-semibold">
-                        {listingData.sqft}
-                      </p>
-                    </div>
-                  </div>
-
-                  {listingData.description && (
-                    <div>
-                      <p className="text-gray-500 text-sm mb-1">
-                        Description
-                      </p>
-
-                      <p className="text-gray-700 text-sm leading-relaxed">
-                        {listingData.description}
-                      </p>
-                    </div>
-                  )}
-
-                  <button
-                    onClick={handleSaveListing}
-                    disabled={saving}
-                    className="mt-4 bg-green-600 text-white px-6 py-3 rounded-xl hover:bg-green-700 disabled:opacity-50"
-                  >
-                    {saving ? "Saving..." : "Save Listing"}
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
+      {uploading && <p>Uploading images...</p>}
     </div>
   );
 }
+
+/* ---------------- UI COMPONENTS ---------------- */
+
+function Section({ title, children }) {
+  return (
+    <div style={styles.section}>
+      <h3>{title}</h3>
+      {children}
+    </div>
+  );
+}
+
+function Input(props) {
+  return <input style={styles.input} {...props} />;
+}
+
+/* ---------------- STYLES ---------------- */
+
+const styles = {
+  container: {
+    maxWidth: 700,
+    margin: "0 auto",
+    padding: 20,
+    fontFamily: "Arial",
+  },
+  section: {
+    marginBottom: 20,
+    padding: 10,
+    border: "1px solid #ddd",
+    borderRadius: 8,
+  },
+  input: {
+    display: "block",
+    width: "100%",
+    padding: 10,
+    marginBottom: 10,
+  },
+  textarea: {
+    width: "100%",
+    minHeight: 100,
+    padding: 10,
+  },
+  button: {
+    padding: 12,
+    width: "100%",
+    background: "black",
+    color: "white",
+    border: "none",
+    cursor: "pointer",
+  },
+  imageGrid: {
+    display: "grid",
+    gridTemplateColumns: "repeat(3, 1fr)",
+    gap: 10,
+  },
+  imageBox: {
+    border: "1px solid #ccc",
+    padding: 5,
+  },
+  image: {
+    width: "100%",
+    height: 80,
+    objectFit: "cover",
+  },
+  imageCard: {
+  position: "relative",
+  border: "1px solid #ccc",
+  borderRadius: 8,
+  overflow: "hidden",
+},
+
+removeBtn: {
+  position: "absolute",
+  top: 5,
+  right: 5,
+  background: "red",
+  color: "white",
+  border: "none",
+  borderRadius: "50%",
+  width: 24,
+  height: 24,
+  cursor: "pointer",
+  fontWeight: "bold",
+  },
+};
